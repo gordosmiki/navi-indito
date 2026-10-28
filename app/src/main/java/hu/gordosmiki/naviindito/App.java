@@ -47,9 +47,15 @@ public class App extends Application {
         }
     }
 
-    /** Az utolsó gombnyomás értéke, ha az legfeljebb maxAgeMs-mal ezelőtt jött; különben -1. */
-    static int recentKey(long maxAgeMs) {
+    /**
+     * Az utolsó gombnyomás értéke, ha az legfeljebb maxAgeMs-mal ezelőtt jött; különben -1.
+     * A gombnyomást "elhasználja", így egy későbbi indítás már nem látja.
+     */
+    static synchronized int consumeKey(long maxAgeMs) {
         if (lastKeyTime == 0) return -1;
-        return SystemClock.elapsedRealtime() - lastKeyTime <= maxAgeMs ? lastKey : -1;
+        int v = SystemClock.elapsedRealtime() - lastKeyTime <= maxAgeMs ? lastKey : -1;
+        lastKey = -1;
+        lastKeyTime = 0;
+        return v;
     }
 }

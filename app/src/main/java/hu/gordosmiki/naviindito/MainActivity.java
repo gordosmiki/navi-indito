@@ -61,7 +61,7 @@ public class MainActivity extends Activity {
     }
 
     private void decideButton() {
-        int key = App.recentKey(3000);
+        int key = App.consumeKey(1500);
         int radioKey = Store.prefs(this).getInt(Store.KEY_RADIO_KEY, Store.DEFAULT_RADIO_KEY);
         if (key == radioKey) {
             Store.log(this, "  RADIO gomb (" + key + ")");
