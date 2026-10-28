@@ -22,6 +22,7 @@ public class App extends Application {
     static volatile int lastKey = -1;
     static volatile long lastKeyTime = 0; // elapsedRealtime
     static volatile long lastLaunchTime = 0; // a MainActivity utolsó indítása
+    static volatile long lastScreenOnTime = 0; // a kijelző utolsó bekapcsolása (még fel nem használt)
 
     @Override
     public void onCreate() {
@@ -42,6 +43,21 @@ public class App extends Application {
                 if (v == radioKey) launchRadio(c);
             }
         };
+        BroadcastReceiver screen = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent i) {
+                if (Intent.ACTION_SCREEN_ON.equals(i.getAction())) {
+                    lastScreenOnTime = SystemClock.elapsedRealtime();
+                    Store.log(c, "kijelző BE");
+                } else {
+                    Store.log(c, "kijelző KI");
+                }
+            }
+        };
+        IntentFilter sf = new IntentFilter(Intent.ACTION_SCREEN_ON);
+        sf.addAction(Intent.ACTION_SCREEN_OFF);
+        registerReceiver(screen, sf);
+
         IntentFilter f = new IntentFilter(ACTION_KEY);
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(r, f, Context.RECEIVER_EXPORTED);
@@ -76,5 +92,13 @@ public class App extends Application {
         lastKey = -1;
         lastKeyTime = 0;
         return v;
+    }
+
+    /** Igaz, ha a kijelző nemrég (maxAgeMs-on belül) kapcsolt be; egyszer használható. */
+    static synchronized boolean consumeRecentScreenOn(long maxAgeMs) {
+        if (lastScreenOnTime == 0) return false;
+        boolean recent = SystemClock.elapsedRealtime() - lastScreenOnTime <= maxAgeMs;
+        lastScreenOnTime = 0;
+        return recent;
     }
 }
