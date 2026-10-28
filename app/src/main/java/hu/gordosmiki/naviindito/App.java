@@ -37,6 +37,8 @@ public class App extends Application {
                 lastKey = v;
                 lastKeyTime = SystemClock.elapsedRealtime();
                 Store.log(c, "  gombüzenet: extra_key_value = " + v);
+                int radioKey = Store.prefs(c).getInt(Store.KEY_RADIO_KEY, Store.DEFAULT_RADIO_KEY);
+                if (v == radioKey) launchRadio(c);
             }
         };
         IntentFilter f = new IntentFilter(ACTION_KEY);
@@ -44,6 +46,22 @@ public class App extends Application {
             registerReceiver(r, f, Context.RECEIVER_EXPORTED);
         } else {
             registerReceiver(r, f);
+        }
+    }
+
+    /** RADIO gomb: a kiválasztott rádióapp indítása (ehhez a "más appok fölött" engedély kell). */
+    static void launchRadio(Context c) {
+        String pkg = Store.prefs(c).getString(Store.KEY_RADIO_PKG, null);
+        if (pkg == null) { Store.log(c, "  nincs beállított rádióapp"); return; }
+        Intent launch = c.getPackageManager().getLaunchIntentForPackage(pkg);
+        if (launch == null) { Store.log(c, "  HIBA: nem indítható: " + pkg); return; }
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            c.startActivity(launch);
+            boolean overlay = Build.VERSION.SDK_INT < 23 || android.provider.Settings.canDrawOverlays(c);
+            Store.log(c, "  rádióapp indítva (háttérből, engedély: " + (overlay ? "van" : "NINCS") + ")");
+        } catch (Exception e) {
+            Store.log(c, "  HIBA a rádióapp indításakor: " + e);
         }
     }
 

@@ -67,6 +67,17 @@ public class SettingsActivity extends Activity {
         row1b.addView(button("Ébredési parancsikon", new View.OnClickListener() {
             @Override public void onClick(View v) { pickShortcutProvider(); }
         }));
+        row1b.addView(button("Parancsikon törlése", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                Store.prefs(SettingsActivity.this).edit()
+                        .remove(Store.KEY_WAKE_SHORTCUT).remove(Store.KEY_WAKE_SHORTCUT_LABEL).apply();
+                Store.log(SettingsActivity.this, "ébredési parancsikon törölve");
+                refresh();
+            }
+        }));
+        row1b.addView(button("Engedély (más appok fölött)", new View.OnClickListener() {
+            @Override public void onClick(View v) { openOverlayPermission(); }
+        }));
         root.addView(row1b);
 
         LinearLayout row2 = new LinearLayout(this);
@@ -108,11 +119,25 @@ public class SettingsActivity extends Activity {
         String navi = Store.prefs(this).getString(Store.KEY_NAVI_LABEL, null);
         String sc = Store.prefs(this).getString(Store.KEY_WAKE_SHORTCUT_LABEL, null);
         String radio = Store.prefs(this).getString(Store.KEY_RADIO_LABEL, null);
-        status.setText("Navigációs app: " + (navi == null ? "(nincs kiválasztva)" : navi)
+        boolean overlay = android.os.Build.VERSION.SDK_INT < 23
+                || android.provider.Settings.canDrawOverlays(this);
+        status.setText("Engedély (más appok fölött): " + (overlay ? "VAN" : "NINCS")
+                + "\nNavigációs app: " + (navi == null ? "(nincs kiválasztva)" : navi)
                 + "\nRádió app (RADIO gomb): " + (radio == null ? "(nincs kiválasztva)" : radio)
                 + "\nÉbredési parancsikon: " + (sc == null ? "(nincs kiválasztva)" : sc));
         String log = Store.readLog(this);
         logView.setText(log.isEmpty() ? "(üres napló)" : log);
+    }
+
+    private void openOverlayPermission() {
+        try {
+            Intent i = new Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:" + getPackageName()));
+            startActivity(i);
+        } catch (Exception e) {
+            Store.log(this, "HIBA az engedélyoldal megnyitásakor: " + e);
+            refresh();
+        }
     }
 
     // ---- Navigációs app kiválasztása ----
