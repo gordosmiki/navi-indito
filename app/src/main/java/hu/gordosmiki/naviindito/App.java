@@ -23,6 +23,7 @@ public class App extends Application {
     static volatile long lastKeyTime = 0; // elapsedRealtime
     static volatile long lastLaunchTime = 0; // a MainActivity utolsó indítása
     static volatile long lastScreenOnTime = 0; // a kijelző utolsó bekapcsolása (még fel nem használt)
+    static volatile boolean pendingWake = false; // gyújtáslevétel volt, a következő indítás ébredés
 
     @Override
     public void onCreate() {
@@ -57,6 +58,25 @@ public class App extends Application {
         IntentFilter sf = new IntentFilter(Intent.ACTION_SCREEN_ON);
         sf.addAction(Intent.ACTION_SCREEN_OFF);
         registerReceiver(screen, sf);
+
+        // Gyújtás (ACC) jelek a gyári rendszertől.
+        BroadcastReceiver power = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent i) {
+                String a = i.getAction();
+                Store.log(c, "tápjel: " + a);
+                if (a != null && a.endsWith("POWER_OFF")) pendingWake = true;
+            }
+        };
+        IntentFilter pf = new IntentFilter("com.nwd.action.ACTION_MCU_POWER_OFF");
+        pf.addAction("com.nwd.action.ACTION_MCU_POWER_ON");
+        pf.addAction("com.zjinnova.zlink.action.POWER_OFF");
+        pf.addAction("com.zjinnova.zlink.action.POWER_ON");
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(power, pf, Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(power, pf);
+        }
 
         IntentFilter f = new IntentFilter(ACTION_KEY);
         if (Build.VERSION.SDK_INT >= 33) {
@@ -100,5 +120,12 @@ public class App extends Application {
         boolean recent = SystemClock.elapsedRealtime() - lastScreenOnTime <= maxAgeMs;
         lastScreenOnTime = 0;
         return recent;
+    }
+
+    /** Igaz, ha gyújtáslevétel óta ez az első indítás; egyszer használható. */
+    static synchronized boolean consumePendingWake() {
+        boolean w = pendingWake;
+        pendingWake = false;
+        return w;
     }
 }

@@ -47,14 +47,16 @@ public class MainActivity extends Activity {
         boolean freshProcess = viaCreate && (ageMs < 0 || ageMs < limit);
         // Ha az app túlélte a gyújtáslevételt, a kijelző bekapcsolásából ismerjük fel az ébredést.
         boolean screenJustOn = App.consumeRecentScreenOn(15000);
-        boolean wake = freshProcess || screenJustOn;
+        boolean afterPowerOff = App.consumePendingWake();
+        boolean wake = freshProcess || screenJustOn || afterPowerOff;
 
         String how = viaCreate ? "onCreate" : "onNewIntent";
         String age = ageMs < 0 ? "?" : String.format(java.util.Locale.US, "%.1f s", ageMs / 1000.0);
 
         if (wake) {
             Store.log(this, "ÉBREDÉS (" + how + ", folyamat kora " + age
-                    + (screenJustOn ? ", kijelző épp bekapcsolt" : "") + ")");
+                    + (screenJustOn ? ", kijelző épp bekapcsolt" : "")
+                    + (afterPowerOff ? ", gyújtáslevétel után" : "") + ")");
             onWake();
         } else {
             Store.log(this, "GOMB indított (" + how + ", folyamat kora " + age + ")");
