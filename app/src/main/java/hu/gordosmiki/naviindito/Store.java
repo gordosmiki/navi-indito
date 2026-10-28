@@ -20,7 +20,12 @@ final class Store {
     static final String KEY_WAKE_SHORTCUT_LABEL = "wake_shortcut_label";
     static final String KEY_WAKE_LIMIT_MS = "wake_limit_ms";
 
+    static final String KEY_RADIO_PKG = "radio_pkg";
+    static final String KEY_RADIO_LABEL = "radio_label";
+    static final String KEY_RADIO_KEY = "radio_key";
+
     static final long DEFAULT_WAKE_LIMIT_MS = 3000;
+    static final int DEFAULT_RADIO_KEY = 4;
 
     private static final String LOG_FILE = "naplo.txt";
     private static final int MAX_LOG_CHARS = 15000;

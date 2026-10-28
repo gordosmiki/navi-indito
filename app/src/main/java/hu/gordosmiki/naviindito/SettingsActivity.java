@@ -52,12 +52,22 @@ public class SettingsActivity extends Activity {
 
         LinearLayout row1 = new LinearLayout(this);
         row1.addView(button("Navi app választása", new View.OnClickListener() {
-            @Override public void onClick(View v) { pickNaviApp(); }
+            @Override public void onClick(View v) {
+                pickApp(Store.KEY_NAVI_PKG, Store.KEY_NAVI_LABEL, "Melyik legyen a navigációs app?");
+            }
         }));
-        row1.addView(button("Ébredési parancsikon", new View.OnClickListener() {
-            @Override public void onClick(View v) { pickShortcutProvider(); }
+        row1.addView(button("Rádió app választása", new View.OnClickListener() {
+            @Override public void onClick(View v) {
+                pickApp(Store.KEY_RADIO_PKG, Store.KEY_RADIO_LABEL, "Melyik legyen a rádió app?");
+            }
         }));
         root.addView(row1);
+
+        LinearLayout row1b = new LinearLayout(this);
+        row1b.addView(button("Ébredési parancsikon", new View.OnClickListener() {
+            @Override public void onClick(View v) { pickShortcutProvider(); }
+        }));
+        root.addView(row1b);
 
         LinearLayout row2 = new LinearLayout(this);
         row2.addView(button("Navi próba", new View.OnClickListener() {
@@ -97,7 +107,9 @@ public class SettingsActivity extends Activity {
     private void refresh() {
         String navi = Store.prefs(this).getString(Store.KEY_NAVI_LABEL, null);
         String sc = Store.prefs(this).getString(Store.KEY_WAKE_SHORTCUT_LABEL, null);
+        String radio = Store.prefs(this).getString(Store.KEY_RADIO_LABEL, null);
         status.setText("Navigációs app: " + (navi == null ? "(nincs kiválasztva)" : navi)
+                + "\nRádió app (RADIO gomb): " + (radio == null ? "(nincs kiválasztva)" : radio)
                 + "\nÉbredési parancsikon: " + (sc == null ? "(nincs kiválasztva)" : sc));
         String log = Store.readLog(this);
         logView.setText(log.isEmpty() ? "(üres napló)" : log);
@@ -105,7 +117,7 @@ public class SettingsActivity extends Activity {
 
     // ---- Navigációs app kiválasztása ----
 
-    private void pickNaviApp() {
+    private void pickApp(final String pkgKey, final String labelKey, String title) {
         final PackageManager pm = getPackageManager();
         Intent main = new Intent(Intent.ACTION_MAIN);
         main.addCategory(Intent.CATEGORY_LAUNCHER);
@@ -123,15 +135,15 @@ public class SettingsActivity extends Activity {
         for (int i = 0; i < apps.size(); i++) names[i] = apps.get(i).loadLabel(pm).toString();
 
         new AlertDialog.Builder(this)
-                .setTitle("Melyik legyen a navigációs app?")
+                .setTitle(title)
                 .setItems(names, new DialogInterface.OnClickListener() {
                     @Override public void onClick(DialogInterface d, int which) {
                         ResolveInfo ri = apps.get(which);
                         Store.prefs(SettingsActivity.this).edit()
-                                .putString(Store.KEY_NAVI_PKG, ri.activityInfo.packageName)
-                                .putString(Store.KEY_NAVI_LABEL, ri.loadLabel(pm).toString())
+                                .putString(pkgKey, ri.activityInfo.packageName)
+                                .putString(labelKey, ri.loadLabel(pm).toString())
                                 .apply();
-                        Store.log(SettingsActivity.this, "beállítva navi app: " + ri.activityInfo.packageName);
+                        Store.log(SettingsActivity.this, "beállítva: " + ri.activityInfo.packageName);
                         refresh();
                     }
                 })
@@ -201,7 +213,10 @@ public class SettingsActivity extends Activity {
 
     private void testNavi() {
         String pkg = Store.prefs(this).getString(Store.KEY_NAVI_PKG, null);
-        if (pkg == null) { pickNaviApp(); return; }
+        if (pkg == null) {
+            pickApp(Store.KEY_NAVI_PKG, Store.KEY_NAVI_LABEL, "Melyik legyen a navigációs app?");
+            return;
+        }
         Intent launch = getPackageManager().getLaunchIntentForPackage(pkg);
         if (launch == null) { Store.log(this, "HIBA: nem indítható: " + pkg); refresh(); return; }
         launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

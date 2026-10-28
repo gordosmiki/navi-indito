@@ -11,19 +11,18 @@ import android.os.SystemClock;
 
 /**
  * Ezt indítja a gyári rendszer (com.nwd.kernel) navigációs programként:
- *  - gyújtásráadás után (ébredés), és
- *  - a NAVI gomb megnyomásakor.
- * A két indítás Intentje egyforma, ezért a folyamat korából döntünk:
- * gyújtáslevételkor a gyári rendszer leállítja az appokat, így ébredéskor
- * ez a folyamat mindig frissen indul. NAVI gombnál a folyamat már él.
+ *  - gyújtásráadás után (ébredés),
+ *  - a NAVI gomb megnyomásakor,
+ *  - és a RADIO gombra is (mert a gyári rádióapp le van tiltva).
  *
- * Ébredés:  a beállított parancsikon indítása (Automate "Gombfigyelő"),
- *           majd vissza a kezdőképernyőre (AGAMA).
- * NAVI gomb: a beállított navigációs app indítása.
- *
- * A képernyőn semmi nem jelenik meg (átlátszó Activity).
+ * Ébredés: a folyamat frissen indult (a gyári rendszer gyújtáslevételkor
+ *          leállítja az appokat) -> parancsikon (Automate), majd kezdőképernyő.
+ * Egyébként: a gombüzenetből (App) eldöntjük, melyik gomb volt:
+ *          RADIO -> rádióapp, minden más -> navigációs app.
  */
 public class MainActivity extends Activity {
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,9 +52,25 @@ public class MainActivity extends Activity {
             Store.log(this, "ÉBREDÉS (" + how + ", folyamat kora " + age + ")");
             onWake();
         } else {
-            Store.log(this, "NAVI GOMB (" + how + ", folyamat kora " + age + ")");
-            onNavi();
+            Store.log(this, "GOMB indított (" + how + ", folyamat kora " + age + ")");
+            // A gombüzenet és az indítás sorrendje nem biztos, ezért várunk egy kicsit.
+            handler.postDelayed(new Runnable() {
+                @Override public void run() { decideButton(); }
+            }, 400);
         }
+    }
+
+    private void decideButton() {
+        int key = App.recentKey(3000);
+        int radioKey = Store.prefs(this).getInt(Store.KEY_RADIO_KEY, Store.DEFAULT_RADIO_KEY);
+        if (key == radioKey) {
+            Store.log(this, "  RADIO gomb (" + key + ")");
+            launchStored(Store.KEY_RADIO_PKG, "rádióapp");
+        } else {
+            Store.log(this, "  NAVI gomb (utolsó gombérték: " + key + ")");
+            launchStored(Store.KEY_NAVI_PKG, "navi");
+        }
+        finish();
     }
 
     private void onWake() {
@@ -72,8 +87,7 @@ public class MainActivity extends Activity {
         } else {
             Store.log(this, "  nincs beállított parancsikon");
         }
-        // Kis várakozás, hogy a parancsikon lefusson, aztán vissza a kezdőképernyőre.
-        new Handler(Looper.getMainLooper()).postDelayed(new Runnable() {
+        handler.postDelayed(new Runnable() {
             @Override public void run() {
                 goHome();
                 finish();
@@ -81,28 +95,26 @@ public class MainActivity extends Activity {
         }, 1500);
     }
 
-    private void onNavi() {
-        String pkg = Store.prefs(this).getString(Store.KEY_NAVI_PKG, null);
+    private void launchStored(String prefKey, String what) {
+        String pkg = Store.prefs(this).getString(prefKey, null);
         if (pkg == null) {
-            Store.log(this, "  nincs beállított navigációs app, beállítások megnyitása");
+            Store.log(this, "  nincs beállított " + what + ", beállítások megnyitása");
             startActivity(new Intent(this, SettingsActivity.class));
-            finish();
             return;
         }
         Intent launch = getPackageManager().getLaunchIntentForPackage(pkg);
         if (launch == null) {
             Store.log(this, "  HIBA: nem indítható: " + pkg);
             goHome();
-        } else {
-            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            try {
-                startActivity(launch);
-                Store.log(this, "  navi indítva: " + pkg);
-            } catch (Exception e) {
-                Store.log(this, "  HIBA a navi indításakor: " + e);
-            }
+            return;
         }
-        finish();
+        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            startActivity(launch);
+            Store.log(this, "  " + what + " indítva: " + pkg);
+        } catch (Exception e) {
+            Store.log(this, "  HIBA (" + what + "): " + e);
+        }
     }
 
     private void goHome() {
