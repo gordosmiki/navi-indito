@@ -38,6 +38,7 @@ public class MainActivity extends Activity {
     }
 
     private void handle(boolean viaCreate) {
+        App.lastLaunchTime = SystemClock.elapsedRealtime();
         long ageMs = -1;
         if (Build.VERSION.SDK_INT >= 24) {
             ageMs = SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime();
@@ -87,12 +88,29 @@ public class MainActivity extends Activity {
         } else {
             Store.log(this, "  nincs beállított parancsikon");
         }
+        final android.content.Context app = getApplicationContext();
+        final long wakeAt = SystemClock.elapsedRealtime();
         handler.postDelayed(new Runnable() {
             @Override public void run() {
-                goHome();
+                goHome(app);
                 finish();
             }
         }, 1500);
+        // A gyári rendszer ébredés után néha később előhozza az utoljára használt appot
+        // (pl. Organic Maps), ezért még kétszer visszaadjuk a képernyőt a kezdőképernyőnek,
+        // hacsak közben nem nyomtál meg egy gombot.
+        for (final long delay : new long[] {4500, 9000}) {
+            handler.postDelayed(new Runnable() {
+                @Override public void run() {
+                    if (App.lastKeyTime > wakeAt || App.lastLaunchTime > wakeAt + 1000) {
+                        Store.log(app, "  (ismételt kezdőképernyő kihagyva: közben gombnyomás volt)");
+                        return;
+                    }
+                    Store.log(app, "  ismételt kezdőképernyő (" + delay / 1000.0 + " s)");
+                    goHome(app);
+                }
+            }, delay);
+        }
     }
 
     private void launchStored(String prefKey, String what) {
@@ -117,14 +135,16 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void goHome() {
+    private void goHome() { goHome(this); }
+
+    private static void goHome(android.content.Context c) {
         Intent home = new Intent(Intent.ACTION_MAIN);
         home.addCategory(Intent.CATEGORY_HOME);
         home.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
-            startActivity(home);
+            c.startActivity(home);
         } catch (Exception e) {
-            Store.log(this, "  HIBA a kezdőképernyő indításakor: " + e);
+            Store.log(c, "  HIBA a kezdőképernyő indításakor: " + e);
         }
     }
 }

@@ -21,6 +21,7 @@ public class App extends Application {
 
     static volatile int lastKey = -1;
     static volatile long lastKeyTime = 0; // elapsedRealtime
+    static volatile long lastLaunchTime = 0; // a MainActivity utolsó indítása
 
     @Override
     public void onCreate() {
