@@ -78,6 +78,31 @@ public class App extends Application {
             registerReceiver(power, pf);
         }
 
+        // Diagnosztika: a gyári "beállítás változott" üzenet teljes tartalma.
+        BroadcastReceiver sysval = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context c, Intent i) {
+                StringBuilder sb = new StringBuilder("rendszerérték: " + i.getAction());
+                Bundle ex = i.getExtras();
+                if (ex != null) {
+                    for (String k : ex.keySet()) {
+                        Object o = ex.get(k);
+                        sb.append("\n      ").append(k).append(" = ").append(o);
+                        if (o != null) sb.append(" (").append(o.getClass().getSimpleName()).append(')');
+                    }
+                } else {
+                    sb.append(" (nincs tartalom)");
+                }
+                Store.log(c, sb.toString());
+            }
+        };
+        IntentFilter vf = new IntentFilter("com.nwd.action.ACTION_SYSTEM_VALUE_CHANGE");
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(sysval, vf, Context.RECEIVER_EXPORTED);
+        } else {
+            registerReceiver(sysval, vf);
+        }
+
         IntentFilter f = new IntentFilter(ACTION_KEY);
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(r, f, Context.RECEIVER_EXPORTED);

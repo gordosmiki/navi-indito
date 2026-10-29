@@ -10,8 +10,8 @@ android {
         applicationId 'hu.gordosmiki.naviindito'
         minSdk 21
         targetSdk 34
-        versionCode 8
-        versionName '0.8'
+        versionCode 9
+        versionName '0.9'
     }
 
     // Fix aláíró kulcs: így az újabb verziók a régire rátelepíthetők.
