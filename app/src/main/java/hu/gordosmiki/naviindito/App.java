@@ -65,7 +65,15 @@ public class App extends Application {
             public void onReceive(Context c, Intent i) {
                 String a = i.getAction();
                 Store.log(c, "tápjel: " + a);
-                if (a != null && a.endsWith("POWER_OFF")) pendingWake = true;
+                if (a != null && a.endsWith("POWER_OFF")) {
+                    // Csak az első POWER_OFF jelnél nézzük meg (utána a takarítás már leállíthatta a rádiót).
+                    if (!pendingWake) {
+                        boolean playing = radioPlayingNow(c);
+                        Store.prefs(c).edit().putBoolean(Store.KEY_RADIO_WAS_PLAYING, playing).apply();
+                        Store.log(c, "  szólt a rádió gyújtáslevételkor: " + (playing ? "IGEN" : "nem"));
+                    }
+                    pendingWake = true;
+                }
             }
         };
         IntentFilter pf = new IntentFilter("com.nwd.action.ACTION_MCU_POWER_OFF");
@@ -109,6 +117,28 @@ public class App extends Application {
         } else {
             registerReceiver(r, f);
         }
+    }
+
+    /** Igaz, ha a kiválasztott rádióapp médiamunkamenete éppen lejátszik (state=PLAYING). */
+    static boolean radioPlayingNow(Context c) {
+        String pkg = Store.prefs(c).getString(Store.KEY_RADIO_PKG, null);
+        if (pkg == null || Build.VERSION.SDK_INT < 21) return false;
+        try {
+            android.media.session.MediaSessionManager msm =
+                    (android.media.session.MediaSessionManager) c.getSystemService(Context.MEDIA_SESSION_SERVICE);
+            java.util.List<android.media.session.MediaController> list =
+                    msm.getActiveSessions(new android.content.ComponentName(c, MediaListener.class));
+            for (android.media.session.MediaController mc : list) {
+                if (!pkg.equals(mc.getPackageName())) continue;
+                android.media.session.PlaybackState ps = mc.getPlaybackState();
+                if (ps != null && ps.getState() == android.media.session.PlaybackState.STATE_PLAYING) return true;
+            }
+        } catch (SecurityException e) {
+            Store.log(c, "  HIBA: nincs médiafigyelés engedély (lásd Navi beállítás)");
+        } catch (Exception e) {
+            Store.log(c, "  HIBA a médiaállapot lekérdezésekor: " + e);
+        }
+        return false;
     }
 
     /** RADIO gomb: a kiválasztott rádióapp indítása (ehhez a "más appok fölött" engedély kell). */

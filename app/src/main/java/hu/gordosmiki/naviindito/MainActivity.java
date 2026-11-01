@@ -102,6 +102,17 @@ public class MainActivity extends Activity {
                 finish();
             }
         }, 1500);
+        // Ha gyújtáslevételkor szólt a rádió, újraindítjuk (a hang visszajön),
+        // a képernyőt pedig az alábbi ismételt kezdőképernyő-hívások visszaadják.
+        if (Store.prefs(app).getBoolean(Store.KEY_RADIO_WAS_PLAYING, false)) {
+            Store.prefs(app).edit().putBoolean(Store.KEY_RADIO_WAS_PLAYING, false).apply();
+            handler.postDelayed(new Runnable() {
+                @Override public void run() {
+                    Store.log(app, "  rádió visszakapcsolása (gyújtáslevétel előtt szólt)");
+                    App.launchRadio(app);
+                }
+            }, 2500);
+        }
         // A gyári rendszer ébredés után néha később előhozza az utoljára használt appot
         // (pl. Organic Maps), ezért még kétszer visszaadjuk a képernyőt a kezdőképernyőnek,
         // hacsak közben nem nyomtál meg egy gombot.

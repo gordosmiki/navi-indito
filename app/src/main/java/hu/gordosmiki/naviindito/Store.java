@@ -23,6 +23,7 @@ final class Store {
     static final String KEY_RADIO_PKG = "radio_pkg";
     static final String KEY_RADIO_LABEL = "radio_label";
     static final String KEY_RADIO_KEY = "radio_key";
+    static final String KEY_RADIO_WAS_PLAYING = "radio_was_playing";
 
     static final long DEFAULT_WAKE_LIMIT_MS = 3000;
     static final int DEFAULT_RADIO_KEY = 4;

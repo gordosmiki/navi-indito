@@ -121,7 +121,11 @@ public class SettingsActivity extends Activity {
         String radio = Store.prefs(this).getString(Store.KEY_RADIO_LABEL, null);
         boolean overlay = android.os.Build.VERSION.SDK_INT < 23
                 || android.provider.Settings.canDrawOverlays(this);
+        String nl = android.provider.Settings.Secure.getString(getContentResolver(), "enabled_notification_listeners");
+        boolean media = nl != null && nl.contains(getPackageName() + "/");
         status.setText("Engedély (más appok fölött): " + (overlay ? "VAN" : "NINCS")
+                + "\nEngedély (médiafigyelés): " + (media ? "VAN"
+                    : "NINCS (aShell: cmd notification allow_listener hu.gordosmiki.naviindito/hu.gordosmiki.naviindito.MediaListener)")
                 + "\nNavigációs app: " + (navi == null ? "(nincs kiválasztva)" : navi)
                 + "\nRádió app (RADIO gomb): " + (radio == null ? "(nincs kiválasztva)" : radio)
                 + "\nÉbredési parancsikon: " + (sc == null ? "(nincs kiválasztva)" : sc));
